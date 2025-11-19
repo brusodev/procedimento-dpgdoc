@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(dir:*)",
+      "Bash(del tutorial_system.db)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
