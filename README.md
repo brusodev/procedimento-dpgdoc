@@ -136,14 +136,43 @@ O frontend estará rodando em http://localhost:5173
 
 ## 🌐 Deploy no Railway
 
-O projeto está pronto para deploy no Railway! Consulte o guia completo em [RAILWAY_DEPLOY.md](./RAILWAY_DEPLOY.md) para instruções detalhadas.
+O projeto está **100% pronto para deploy no Railway**! Todos os arquivos de configuração já estão incluídos.
 
-**Deploy rápido:**
-1. Crie conta no [Railway](https://railway.app/)
-2. Conecte seu repositório GitHub
-3. Configure dois serviços com root directories: `backend` e `frontend`
-4. Configure as variáveis de ambiente
-5. Deploy automático! 🚀
+📖 **Consulte o guia completo em [DEPLOY.md](./DEPLOY.md)** para instruções passo-a-passo detalhadas.
+
+### Deploy Rápido (5 minutos)
+
+1. **Crie conta no [Railway](https://railway.app/)**
+2. **Conecte seu repositório GitHub**
+3. **Adicione PostgreSQL** ao projeto
+4. **Configure as variáveis de ambiente**:
+   ```bash
+   SECRET_KEY=sua-chave-secreta-aqui  # Use: openssl rand -hex 32
+   CLOUDINARY_CLOUD_NAME=seu-cloud-name
+   CLOUDINARY_API_KEY=sua-api-key
+   CLOUDINARY_API_SECRET=sua-api-secret
+   CORS_ORIGINS=https://seu-app.railway.app
+   ```
+5. **Deploy automático! 🚀**
+
+### Arquivos de Configuração Incluídos
+
+- ✅ `railway.json` - Configuração do Railway
+- ✅ `nixpacks.toml` - Build configuration
+- ✅ `Procfile` - Comando de inicialização
+- ✅ `backend/requirements.txt` - Dependências Python
+- ✅ `backend/create_admin.py` - Script para criar usuário admin
+- ✅ `backend/.env.example` - Exemplo de variáveis de ambiente
+
+### O que o Railway Faz Automaticamente
+
+1. Detecta o projeto Python + Node.js
+2. Instala dependências do backend (`pip install`)
+3. Instala dependências do frontend (`npm install`)
+4. Compila o frontend (`npm run build`)
+5. Serve o frontend através do backend FastAPI
+6. Provisiona PostgreSQL automaticamente
+7. Gera domínio HTTPS gratuito
 
 ## 📖 Guia de Uso
 
