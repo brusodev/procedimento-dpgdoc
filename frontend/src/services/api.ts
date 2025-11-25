@@ -9,6 +9,36 @@ const api = axios.create({
   },
 })
 
+// Request interceptor to add auth token
+api.interceptors.request.use(
+  (config) => {
+    const authStorage = localStorage.getItem('auth-storage')
+    if (authStorage) {
+      const { token } = JSON.parse(authStorage).state
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`
+      }
+    }
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
+  }
+)
+
+// Response interceptor to handle auth errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token expired or invalid - clear auth and redirect to login
+      localStorage.removeItem('auth-storage')
+      window.location.href = '/login'
+    }
+    return Promise.reject(error)
+  }
+)
+
 export interface Annotation {
   id?: string
   step_id?: string
@@ -87,9 +117,11 @@ export const tutorialApi = {
 
 // Upload endpoints
 export const uploadApi = {
-  uploadScreenshot: (file: File) => {
+  uploadScreenshot: (file: File, tutorialTitle?: string, stepOrder?: number) => {
     const formData = new FormData()
     formData.append('file', file)
+    if (tutorialTitle) formData.append('tutorial_title', tutorialTitle)
+    if (stepOrder !== undefined) formData.append('step_order', stepOrder.toString())
     return api.post('/api/upload/screenshot', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -97,9 +129,11 @@ export const uploadApi = {
     })
   },
   deleteScreenshot: (filename: string) => api.delete(`/api/upload/screenshot/${filename}`),
-  uploadVideo: (file: File) => {
+  uploadVideo: (file: File, tutorialTitle?: string, stepOrder?: number) => {
     const formData = new FormData()
     formData.append('file', file)
+    if (tutorialTitle) formData.append('tutorial_title', tutorialTitle)
+    if (stepOrder !== undefined) formData.append('step_order', stepOrder.toString())
     return api.post('/api/upload/video', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -117,6 +151,46 @@ export const analyticsApi = {
     api.put(`/api/analytics/progress/${progressId}`, data),
   getTutorialStats: (tutorialId: string) => api.get(`/api/analytics/tutorials/${tutorialId}/stats`),
   getDashboardStats: () => api.get('/api/analytics/dashboard'),
+}
+
+// Auth endpoints
+export const authApi = {
+  login: (email: string, password: string) => api.post('/api/auth/login', { email, password }),
+  register: (data: {
+    email: string
+    username: string
+    password: string
+    full_name?: string
+    role?: string
+  }) => api.post('/api/auth/register', data),
+  getMe: () => api.get('/api/auth/me'),
+  logout: () => api.post('/api/auth/logout'),
+}
+
+// User management endpoints
+export interface UserData {
+  id?: string
+  email: string
+  username: string
+  full_name?: string
+  role: 'admin' | 'instructor' | 'student'
+  is_active?: boolean
+  created_at?: string
+  last_login?: string
+}
+
+export const userApi = {
+  list: (params?: { skip?: number; limit?: number }) => api.get('/api/users/', { params }),
+  get: (userId: string) => api.get(`/api/users/${userId}`),
+  update: (userId: string, data: Partial<UserData>) => api.put(`/api/users/${userId}`, data),
+  delete: (userId: string) => api.delete(`/api/users/${userId}`),
+  changePassword: (userId: string, currentPassword: string, newPassword: string) =>
+    api.post(`/api/users/${userId}/password`, { current_password: currentPassword, new_password: newPassword }),
+  grantTutorialAccess: (userId: string, tutorialIds: string[]) =>
+    api.post(`/api/users/${userId}/tutorials/access`, { user_id: userId, tutorial_ids: tutorialIds }),
+  revokeTutorialAccess: (userId: string, tutorialId: string) =>
+    api.delete(`/api/users/${userId}/tutorials/${tutorialId}/access`),
+  getAccessibleTutorials: (userId: string) => api.get(`/api/users/${userId}/tutorials`),
 }
 
 export default api

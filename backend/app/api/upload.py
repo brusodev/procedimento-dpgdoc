@@ -1,10 +1,11 @@
 import os
 import cloudinary
 import cloudinary.uploader
-from fastapi import APIRouter, File, UploadFile, HTTPException
+from fastapi import APIRouter, File, UploadFile, HTTPException, Form
 from fastapi.responses import JSONResponse
 from PIL import Image
 import io
+from typing import Optional
 
 router = APIRouter()
 
@@ -51,8 +52,12 @@ def compress_image_in_memory(file_data: bytes, max_width: int = 1920) -> bytes:
 
 
 @router.post("/screenshot")
-async def upload_screenshot(file: UploadFile = File(...)):
-    """Upload and process a screenshot to Cloudinary"""
+async def upload_screenshot(
+    file: UploadFile = File(...),
+    tutorial_title: Optional[str] = Form(None),
+    step_order: Optional[int] = Form(None)
+):
+    """Upload and process a screenshot to Cloudinary with optional custom naming"""
 
     # Validate file extension
     file_ext = get_file_extension(file.filename)
@@ -77,12 +82,24 @@ async def upload_screenshot(file: UploadFile = File(...)):
         compressed_content = compress_image_in_memory(file_content)
         compressed_size = len(compressed_content)
 
+        # Generate custom public_id based on tutorial and step
+        upload_options = {
+            "resource_type": "image",
+            "folder": "tutorial_system/screenshots",
+            "format": "jpg"
+        }
+
+        if tutorial_title and step_order is not None:
+            # Sanitize tutorial title for use in filename
+            safe_title = "".join(c if c.isalnum() or c in ('-', '_') else '_' for c in tutorial_title)
+            safe_title = safe_title[:50]  # Limit length
+            custom_name = f"{safe_title}_step_{step_order}"
+            upload_options["public_id"] = f"tutorial_system/screenshots/{custom_name}"
+
         # Upload to Cloudinary
         result = cloudinary.uploader.upload(
             io.BytesIO(compressed_content),
-            resource_type="image",
-            folder="tutorial_system/screenshots",
-            format="jpg"
+            **upload_options
         )
 
         return JSONResponse(content={
@@ -101,8 +118,12 @@ async def upload_screenshot(file: UploadFile = File(...)):
 
 
 @router.post("/video")
-async def upload_video(file: UploadFile = File(...)):
-    """Upload a video file to Cloudinary"""
+async def upload_video(
+    file: UploadFile = File(...),
+    tutorial_title: Optional[str] = Form(None),
+    step_order: Optional[int] = Form(None)
+):
+    """Upload a video file to Cloudinary with optional custom naming"""
 
     # Validate file extension
     file_ext = get_file_extension(file.filename)
@@ -123,11 +144,23 @@ async def upload_video(file: UploadFile = File(...)):
                 detail=f"File too large. Maximum size is {MAX_VIDEO_SIZE / 1024 / 1024}MB"
             )
 
+        # Generate custom public_id based on tutorial and step
+        upload_options = {
+            "resource_type": "video",
+            "folder": "tutorial_system/videos"
+        }
+
+        if tutorial_title and step_order is not None:
+            # Sanitize tutorial title for use in filename
+            safe_title = "".join(c if c.isalnum() or c in ('-', '_') else '_' for c in tutorial_title)
+            safe_title = safe_title[:50]  # Limit length
+            custom_name = f"{safe_title}_step_{step_order}"
+            upload_options["public_id"] = f"tutorial_system/videos/{custom_name}"
+
         # Upload to Cloudinary
         result = cloudinary.uploader.upload(
             io.BytesIO(file_content),
-            resource_type="video",
-            folder="tutorial_system/videos"
+            **upload_options
         )
 
         return JSONResponse(content={
@@ -137,7 +170,8 @@ async def upload_video(file: UploadFile = File(...)):
             "file_size": file_size,
             "duration": result.get("duration"),
             "width": result.get("width"),
-            "height": result.get("height")
+            "height": result.get("height"),
+            "format": result.get("format")
         })
 
     except HTTPException:
@@ -146,36 +180,60 @@ async def upload_video(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
 
-@router.delete("/screenshot/{public_id}")
+@router.delete("/screenshot/{public_id:path}")
 async def delete_screenshot(public_id: str):
     """Delete a screenshot from Cloudinary"""
     try:
+        print(f"[DELETE SCREENSHOT] Attempting to delete: {public_id}")
         result = cloudinary.uploader.destroy(
             public_id,
             resource_type="image"
         )
-        
-        if result.get("result") == "ok":
-            return {"success": True, "message": "Screenshot deleted"}
+        print(f"[DELETE SCREENSHOT] Cloudinary result: {result}")
+
+        result_status = result.get("result")
+
+        if result_status == "ok":
+            return {"success": True, "message": "Screenshot deleted successfully"}
+        elif result_status == "not found":
+            # Screenshot already deleted or never existed - treat as success
+            return {"success": True, "message": "Screenshot not found (may have been already deleted)"}
         else:
-            raise HTTPException(status_code=404, detail="Screenshot not found")
+            print(f"[DELETE SCREENSHOT] Unexpected result: {result_status}")
+            return {"success": False, "message": f"Unexpected result: {result_status}"}
+
     except Exception as e:
+        print(f"[DELETE SCREENSHOT] Exception: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Delete failed: {str(e)}")
 
 
-@router.delete("/video/{public_id}")
+@router.delete("/video/{public_id:path}")
 async def delete_video(public_id: str):
     """Delete a video from Cloudinary"""
     try:
+        print(f"[DELETE VIDEO] Attempting to delete: {public_id}")
         result = cloudinary.uploader.destroy(
             public_id,
             resource_type="video"
         )
-        
-        if result.get("result") == "ok":
-            return {"success": True, "message": "Video deleted"}
+        print(f"[DELETE VIDEO] Cloudinary result: {result}")
+
+        result_status = result.get("result")
+
+        if result_status == "ok":
+            return {"success": True, "message": "Video deleted successfully"}
+        elif result_status == "not found":
+            # Video already deleted or never existed - treat as success
+            return {"success": True, "message": "Video not found (may have been already deleted)"}
         else:
-            raise HTTPException(status_code=404, detail="Video not found")
+            print(f"[DELETE VIDEO] Unexpected result: {result_status}")
+            return {"success": False, "message": f"Unexpected result: {result_status}"}
+
     except Exception as e:
+        print(f"[DELETE VIDEO] Exception: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Delete failed: {str(e)}")
 

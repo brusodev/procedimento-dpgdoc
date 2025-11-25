@@ -1,19 +1,46 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from ..database import get_db
 from ..models import Tutorial, Step, Annotation
+from ..models.user import User, UserRole
 from ..schemas.tutorial import (
     TutorialCreate, TutorialUpdate, TutorialResponse, TutorialListResponse,
     StepCreate, StepUpdate, StepResponse, AnnotationCreate
 )
+from ..services.auth import get_current_user, require_role
 
 router = APIRouter()
 
 
+def check_tutorial_access(tutorial: Tutorial, user: User) -> bool:
+    """Check if user has access to a tutorial"""
+    # Admins have access to all tutorials
+    if user.role == UserRole.ADMIN:
+        return True
+
+    # Creator has access to their own tutorials
+    if tutorial.created_by == user.id:
+        return True
+
+    # Check if tutorial is published
+    if tutorial.is_published:
+        return True
+
+    # Check if user has explicit access
+    if tutorial in user.accessible_tutorials:
+        return True
+
+    return False
+
+
 @router.post("/", response_model=TutorialResponse, status_code=status.HTTP_201_CREATED)
-def create_tutorial(tutorial: TutorialCreate, db: Session = Depends(get_db)):
-    """Create a new tutorial with steps and annotations"""
+def create_tutorial(
+    tutorial: TutorialCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role([UserRole.ADMIN]))
+):
+    """Create a new tutorial with steps and annotations (Admin only)"""
 
     # Create tutorial
     db_tutorial = Tutorial(
@@ -21,7 +48,8 @@ def create_tutorial(tutorial: TutorialCreate, db: Session = Depends(get_db)):
         description=tutorial.description,
         category=tutorial.category,
         tags=tutorial.tags,
-        created_by="default-user"  # TODO: Get from auth
+        is_published=tutorial.is_published if hasattr(tutorial, 'is_published') else False,
+        created_by=current_user.id
     )
     db.add(db_tutorial)
     db.flush()
@@ -66,10 +94,20 @@ def list_tutorials(
     limit: int = 100,
     category: str = None,
     published_only: bool = False,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    """List all tutorials with pagination and filters"""
+    """List tutorials accessible to the current user"""
     query = db.query(Tutorial)
+
+    # Filter based on user role and access
+    if current_user.role == UserRole.COLABORADOR:
+        # Colaboradores only see published tutorials or tutorials they have explicit access to
+        accessible_tutorial_ids = [t.id for t in current_user.accessible_tutorials]
+        query = query.filter(
+            (Tutorial.is_published == True) | (Tutorial.id.in_(accessible_tutorial_ids))
+        )
+    # Admins see everything
 
     if category:
         query = query.filter(Tutorial.category == category)
@@ -98,12 +136,23 @@ def list_tutorials(
 
 
 @router.get("/{tutorial_id}", response_model=TutorialResponse)
-def get_tutorial(tutorial_id: str, db: Session = Depends(get_db)):
+def get_tutorial(
+    tutorial_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Get a specific tutorial with all steps and annotations"""
     tutorial = db.query(Tutorial).filter(Tutorial.id == tutorial_id).first()
 
     if not tutorial:
         raise HTTPException(status_code=404, detail="Tutorial not found")
+
+    # Check access permissions
+    if not check_tutorial_access(tutorial, current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have access to this tutorial"
+        )
 
     return tutorial
 
@@ -112,13 +161,21 @@ def get_tutorial(tutorial_id: str, db: Session = Depends(get_db)):
 def update_tutorial(
     tutorial_id: str,
     tutorial_update: TutorialUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Update tutorial with all metadata and steps"""
     db_tutorial = db.query(Tutorial).filter(Tutorial.id == tutorial_id).first()
 
     if not db_tutorial:
         raise HTTPException(status_code=404, detail="Tutorial not found")
+
+    # Only creator and admins can update
+    if current_user.role != UserRole.ADMIN and db_tutorial.created_by != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to update this tutorial"
+        )
 
     # Update tutorial metadata (excluding steps)
     update_data = tutorial_update.dict(exclude_none=True, exclude={'steps'})
@@ -167,12 +224,23 @@ def update_tutorial(
 
 
 @router.delete("/{tutorial_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_tutorial(tutorial_id: str, db: Session = Depends(get_db)):
+def delete_tutorial(
+    tutorial_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Delete a tutorial and all associated steps"""
     db_tutorial = db.query(Tutorial).filter(Tutorial.id == tutorial_id).first()
 
     if not db_tutorial:
         raise HTTPException(status_code=404, detail="Tutorial not found")
+
+    # Only creator and admins can delete
+    if current_user.role != UserRole.ADMIN and db_tutorial.created_by != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to delete this tutorial"
+        )
 
     db.delete(db_tutorial)
     db.commit()

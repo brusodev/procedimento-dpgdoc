@@ -29,6 +29,7 @@ const TutorialPlayer: React.FC<TutorialPlayerProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showControls, setShowControls] = useState(true)
   const hideControlsTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const lastMouseMoveRef = useRef<number>(0)
 
   const currentStep = steps[currentStepIndex]
   const isLastStep = currentStepIndex === steps.length - 1
@@ -44,6 +45,11 @@ const TutorialPlayer: React.FC<TutorialPlayerProps> = ({
   const handleMouseMove = () => {
     if (!isFullscreen) return
 
+    // Debounce: only process mouse move if at least 200ms have passed
+    const now = Date.now()
+    if (now - lastMouseMoveRef.current < 200) return
+    lastMouseMoveRef.current = now
+
     setShowControls(true)
 
     // Clear existing timeout
@@ -51,10 +57,10 @@ const TutorialPlayer: React.FC<TutorialPlayerProps> = ({
       clearTimeout(hideControlsTimeoutRef.current)
     }
 
-    // Set new timeout to hide controls after 3 seconds
+    // Set new timeout to hide controls after 10 seconds
     hideControlsTimeoutRef.current = setTimeout(() => {
       setShowControls(false)
-    }, 3000)
+    }, 10000)
   }
 
   useEffect(() => {
@@ -191,7 +197,7 @@ const TutorialPlayer: React.FC<TutorialPlayerProps> = ({
       </motion.div>
 
       {/* Main content */}
-      <div className="flex-1 flex items-center justify-center p-8 overflow-auto">
+      <div className={`flex-1 flex items-center justify-center overflow-auto ${isFullscreen ? 'pt-24 px-8 pb-8' : 'p-8'}`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={currentStepIndex}
@@ -210,10 +216,11 @@ const TutorialPlayer: React.FC<TutorialPlayerProps> = ({
             {currentStep.video_url && (
               <div className="mb-6 bg-black rounded-lg overflow-hidden shadow-2xl max-w-5xl mx-auto">
                 <video
-                  src={`http://localhost:8000${currentStep.video_url}`}
+                  src={currentStep.video_url}
                   controls
                   className="w-full h-auto max-h-[70vh] object-contain"
                   key={currentStepIndex}
+                  controlsList="nodownload"
                 >
                   Seu navegador não suporta o elemento de vídeo.
                 </video>
@@ -224,7 +231,7 @@ const TutorialPlayer: React.FC<TutorialPlayerProps> = ({
             {currentStep.screenshot_url && !currentStep.video_url && (
               <div className="relative mb-6 bg-white rounded-lg overflow-hidden shadow-2xl max-w-5xl mx-auto">
                 <img
-                  src={`http://localhost:8000${currentStep.screenshot_url}`}
+                  src={currentStep.screenshot_url}
                   alt={currentStep.title}
                   className="w-full h-auto max-h-[70vh] object-contain mx-auto"
                 />

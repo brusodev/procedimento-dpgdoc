@@ -8,8 +8,7 @@ from ..database import Base
 
 class UserRole(str, enum.Enum):
     ADMIN = "admin"
-    INSTRUCTOR = "instructor"
-    STUDENT = "student"
+    COLABORADOR = "colaborador"
 
 
 class User(Base):
@@ -20,10 +19,12 @@ class User(Base):
     username = Column(String(100), unique=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     full_name = Column(String(255))
-    role = Column(Enum(UserRole), default=UserRole.STUDENT)
+    role = Column(Enum(UserRole, values_callable=lambda x: [e.value for e in x]), default=UserRole.COLABORADOR)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_login = Column(DateTime)
 
     tutorials = relationship("Tutorial", back_populates="creator")
     progress_records = relationship("Progress", back_populates="user")
+    # Tutorials this user can access
+    accessible_tutorials = relationship("Tutorial", secondary="user_tutorial_access", back_populates="allowed_users")

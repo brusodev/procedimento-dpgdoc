@@ -3,7 +3,21 @@
     "allow": [
       "Bash(mkdir:*)",
       "Bash(dir:*)",
-      "Bash(del tutorial_system.db)"
+      "Bash(del tutorial_system.db)",
+      "Bash(curl:*)",
+      "Bash(python create_admin.py:*)",
+      "Bash(pip install:*)",
+      "Bash(..venvScriptspython.exe -m pip install --upgrade \"bcrypt>=4.1.0\" --force-reinstall)",
+      "Bash(..venvScriptspython.exe -m pip uninstall bcrypt -y)",
+      "Bash(\"..\\venv\\Scripts\\python.exe\" -m pip uninstall bcrypt -y)",
+      "Bash(\"venv\\Scripts\\python.exe\" -m pip uninstall bcrypt -y)",
+      "Bash(venv/Scripts/python.exe -m pip:*)",
+      "Bash(pip uninstall:*)",
+      "Bash(printf:*)",
+      "Bash(./python.exe -m pip:*)",
+      "Bash(cat:*)",
+      "Bash(python:*)",
+      "Bash(node -e:*)"
     ],
     "deny": [],
     "ask": []

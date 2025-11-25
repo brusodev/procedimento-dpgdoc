@@ -1,8 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base
-from .api import tutorials, analytics, upload
+from .api import tutorials, analytics, upload, auth, users
 import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -25,6 +29,8 @@ app.add_middleware(
 )
 
 # Include routers
+app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
+app.include_router(users.router, prefix="/api/users", tags=["users"])
 app.include_router(tutorials.router, prefix="/api/tutorials", tags=["tutorials"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
 app.include_router(upload.router, prefix="/api/upload", tags=["upload"])

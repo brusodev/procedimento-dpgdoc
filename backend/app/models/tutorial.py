@@ -1,8 +1,18 @@
-from sqlalchemy import Column, String, Integer, Text, ForeignKey, JSON, DateTime, Boolean
+from sqlalchemy import Column, String, Integer, Text, ForeignKey, JSON, DateTime, Boolean, Table
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
 from ..database import Base
+
+
+# Association table for many-to-many relationship between users and tutorials
+user_tutorial_access = Table(
+    'user_tutorial_access',
+    Base.metadata,
+    Column('user_id', String, ForeignKey('users.id'), primary_key=True),
+    Column('tutorial_id', String, ForeignKey('tutorials.id'), primary_key=True),
+    Column('granted_at', DateTime, default=datetime.utcnow)
+)
 
 
 class Tutorial(Base):
@@ -22,6 +32,8 @@ class Tutorial(Base):
     steps = relationship("Step", back_populates="tutorial", cascade="all, delete-orphan")
     creator = relationship("User", back_populates="tutorials")
     progress_records = relationship("Progress", back_populates="tutorial", cascade="all, delete-orphan")
+    # Users who have access to this tutorial
+    allowed_users = relationship("User", secondary=user_tutorial_access, back_populates="accessible_tutorials")
 
 
 class Step(Base):

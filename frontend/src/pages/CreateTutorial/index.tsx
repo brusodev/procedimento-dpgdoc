@@ -14,6 +14,7 @@ const CreateTutorial: React.FC = () => {
   const [category, setCategory] = useState('')
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState('')
+  const [isPublished, setIsPublished] = useState(false)
   const [steps, setSteps] = useState<Step[]>([])
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
   const [saving, setSaving] = useState(false)
@@ -73,6 +74,7 @@ const CreateTutorial: React.FC = () => {
         description,
         category,
         tags,
+        is_published: isPublished,
         steps: steps.map((step, index) => ({
           ...step,
           order: index + 1,
@@ -186,6 +188,19 @@ const CreateTutorial: React.FC = () => {
             </div>
           </div>
         </div>
+
+        <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
+          <input
+            type="checkbox"
+            id="isPublished"
+            checked={isPublished}
+            onChange={(e) => setIsPublished(e.target.checked)}
+            className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+          />
+          <label htmlFor="isPublished" className="text-sm font-medium text-gray-700 cursor-pointer">
+            Publicar tutorial (disponível para todos os colaboradores)
+          </label>
+        </div>
       </div>
 
       {/* Steps section */}
@@ -254,6 +269,9 @@ const CreateTutorial: React.FC = () => {
                     <ScreenshotUpload
                       currentImage={currentStep.screenshot_url}
                       onUploadSuccess={(url) => updateCurrentStep({ screenshot_url: url, video_url: undefined })}
+                      onDelete={() => updateCurrentStep({ screenshot_url: undefined })}
+                      tutorialTitle={title}
+                      stepOrder={currentStepIndex + 1}
                     />
                   </div>
 
@@ -264,6 +282,9 @@ const CreateTutorial: React.FC = () => {
                     <VideoUpload
                       currentVideo={currentStep.video_url}
                       onUploadSuccess={(url) => updateCurrentStep({ video_url: url, screenshot_url: undefined })}
+                      onDelete={() => updateCurrentStep({ video_url: undefined })}
+                      tutorialTitle={title}
+                      stepOrder={currentStepIndex + 1}
                     />
                   </div>
                 </div>
@@ -274,7 +295,7 @@ const CreateTutorial: React.FC = () => {
                       Adicionar Anotações
                     </label>
                     <ImageAnnotator
-                      imageUrl={`http://localhost:8000${currentStep.screenshot_url}`}
+                      imageUrl={currentStep.screenshot_url}
                       annotations={currentStep.annotations}
                       onAnnotationsChange={(annotations) =>
                         updateCurrentStep({ annotations })

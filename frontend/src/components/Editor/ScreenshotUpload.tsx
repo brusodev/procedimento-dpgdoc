@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useState, useEffect } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Upload, X, CheckCircle } from 'lucide-react'
 import { uploadApi } from '@/services/api'
@@ -6,15 +6,27 @@ import { uploadApi } from '@/services/api'
 interface ScreenshotUploadProps {
   onUploadSuccess: (url: string) => void
   currentImage?: string
+  onDelete?: () => void
+  tutorialTitle?: string
+  stepOrder?: number
 }
 
 const ScreenshotUpload: React.FC<ScreenshotUploadProps> = ({
   onUploadSuccess,
   currentImage,
+  onDelete,
+  tutorialTitle,
+  stepOrder,
 }) => {
   const [uploading, setUploading] = useState(false)
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(currentImage || null)
+  const [uploadedPublicId, setUploadedPublicId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  // Sync uploadedUrl with currentImage prop when it changes
+  useEffect(() => {
+    setUploadedUrl(currentImage || null)
+  }, [currentImage])
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return
@@ -24,16 +36,18 @@ const ScreenshotUpload: React.FC<ScreenshotUploadProps> = ({
     setError(null)
 
     try {
-      const response = await uploadApi.uploadScreenshot(file)
+      const response = await uploadApi.uploadScreenshot(file, tutorialTitle, stepOrder)
       const url = response.data.url
+      const publicId = response.data.public_id
       setUploadedUrl(url)
+      setUploadedPublicId(publicId)
       onUploadSuccess(url)
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Falha no upload')
     } finally {
       setUploading(false)
     }
-  }, [onUploadSuccess])
+  }, [onUploadSuccess, tutorialTitle, stepOrder])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -44,16 +58,51 @@ const ScreenshotUpload: React.FC<ScreenshotUploadProps> = ({
     disabled: uploading,
   })
 
-  const clearImage = () => {
+  const clearImage = async () => {
+    // Confirmar antes de deletar
+    const confirmed = window.confirm('Tem certeza que deseja remover esta imagem? Ela será deletada permanentemente do Cloudinary.')
+
+    if (!confirmed) {
+      return
+    }
+
+    // Extract public_id from URL if we don't have it stored
+    let publicIdToDelete = uploadedPublicId
+
+    if (!publicIdToDelete && uploadedUrl) {
+      // Extract public_id from Cloudinary URL
+      // URL format: https://res.cloudinary.com/cloud_name/image/upload/v123456789/folder/public_id.ext
+      const match = uploadedUrl.match(/\/upload\/(?:v\d+\/)?(.+)\.\w+$/)
+      if (match) {
+        publicIdToDelete = match[1]
+      }
+    }
+
+    // Delete from Cloudinary if we have a public_id
+    if (publicIdToDelete) {
+      try {
+        await uploadApi.deleteScreenshot(publicIdToDelete)
+        console.log('Screenshot deleted from Cloudinary:', publicIdToDelete)
+      } catch (err) {
+        console.error('Failed to delete screenshot from Cloudinary:', err)
+        alert('Erro ao deletar imagem do Cloudinary. Verifique o console.')
+      }
+    }
+
     setUploadedUrl(null)
+    setUploadedPublicId(null)
     setError(null)
+
+    if (onDelete) {
+      onDelete()
+    }
   }
 
   if (uploadedUrl) {
     return (
       <div className="relative">
         <img
-          src={`http://localhost:8000${uploadedUrl}`}
+          src={uploadedUrl}
           alt="Screenshot"
           className="w-full h-auto max-h-96 object-contain rounded-lg shadow bg-gray-100"
         />

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BookOpen, Play, Calendar } from 'lucide-react'
+import { BookOpen, Play, Calendar, Trash2, Edit } from 'lucide-react'
 import { tutorialApi, analyticsApi } from '@/services/api'
+import useAuthStore from '@/services/authStore'
 
 interface TutorialListItem {
   id: string
@@ -23,9 +24,11 @@ interface DashboardStats {
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate()
+  const { user } = useAuthStore()
   const [tutorials, setTutorials] = useState<TutorialListItem[]>([])
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const isAdmin = user?.role === 'admin'
 
   useEffect(() => {
     loadData()
@@ -44,6 +47,24 @@ const Dashboard: React.FC = () => {
       console.error('Error loading data:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleDeleteTutorial = async (tutorialId: string, tutorialTitle: string) => {
+    const confirmed = window.confirm(
+      `Tem certeza que deseja deletar o tutorial "${tutorialTitle}"?\n\nEsta ação não pode ser desfeita.`
+    )
+
+    if (!confirmed) return
+
+    try {
+      await tutorialApi.delete(tutorialId)
+      // Reload data after deletion
+      loadData()
+      alert('Tutorial deletado com sucesso!')
+    } catch (error: any) {
+      console.error('Error deleting tutorial:', error)
+      alert(error.response?.data?.detail || 'Erro ao deletar tutorial')
     }
   }
 
@@ -151,7 +172,33 @@ const Dashboard: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="bg-gray-50 px-6 py-3 flex justify-end">
+                <div className="bg-gray-50 px-6 py-3 flex justify-between items-center">
+                  {isAdmin && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          navigate(`/edit-tutorial/${tutorial.id}`)
+                        }}
+                        className="flex items-center gap-1 text-blue-600 hover:text-blue-700 font-medium text-sm"
+                        title="Editar tutorial"
+                      >
+                        <Edit className="w-4 h-4" />
+                        Editar
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeleteTutorial(tutorial.id, tutorial.title)
+                        }}
+                        className="flex items-center gap-1 text-red-600 hover:text-red-700 font-medium text-sm"
+                        title="Deletar tutorial"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Deletar
+                      </button>
+                    </div>
+                  )}
                   <button
                     onClick={(e) => {
                       e.stopPropagation()

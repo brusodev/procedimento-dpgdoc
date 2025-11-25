@@ -124,16 +124,17 @@ const ViewTutorial: React.FC = () => {
                         <h3 className="font-semibold text-lg mb-2">{step.title}</h3>
                         {step.video_url && (
                           <video
-                            src={`http://localhost:8000${step.video_url}`}
+                            src={step.video_url}
                             controls
                             className="w-full max-w-3xl h-auto max-h-96 object-contain rounded-lg shadow-sm mb-2"
+                            controlsList="nodownload"
                           >
                             Seu navegador não suporta o elemento de vídeo.
                           </video>
                         )}
                         {step.screenshot_url && !step.video_url && (
                           <img
-                            src={`http://localhost:8000${step.screenshot_url}`}
+                            src={step.screenshot_url}
                             alt={step.title}
                             className="w-full max-w-3xl h-auto max-h-96 object-contain rounded-lg shadow-sm mb-2"
                           />

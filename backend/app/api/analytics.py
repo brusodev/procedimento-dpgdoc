@@ -3,21 +3,24 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Dict
 from ..database import get_db
-from ..models import Progress, Tutorial, Step
+from ..models import Progress, Tutorial, Step, User
+from ..models.user import UserRole
 from ..schemas.progress import ProgressCreate, ProgressUpdate, ProgressResponse
+from ..services.auth import get_current_user
 
 router = APIRouter()
 
 
 @router.post("/progress", response_model=ProgressResponse)
-def create_progress(progress: ProgressCreate, db: Session = Depends(get_db)):
+def create_progress(
+    progress: ProgressCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Start tracking progress for a tutorial"""
-    # TODO: Get user_id from auth
-    user_id = "default-user"
-
     # Check if progress already exists
     existing = db.query(Progress).filter(
-        Progress.user_id == user_id,
+        Progress.user_id == current_user.id,
         Progress.tutorial_id == progress.tutorial_id
     ).first()
 
@@ -25,7 +28,7 @@ def create_progress(progress: ProgressCreate, db: Session = Depends(get_db)):
         return existing
 
     db_progress = Progress(
-        user_id=user_id,
+        user_id=current_user.id,
         tutorial_id=progress.tutorial_id
     )
     db.add(db_progress)
@@ -35,13 +38,14 @@ def create_progress(progress: ProgressCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/progress/{tutorial_id}", response_model=ProgressResponse)
-def get_progress(tutorial_id: str, db: Session = Depends(get_db)):
+def get_progress(
+    tutorial_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Get user's progress for a specific tutorial"""
-    # TODO: Get user_id from auth
-    user_id = "default-user"
-
     progress = db.query(Progress).filter(
-        Progress.user_id == user_id,
+        Progress.user_id == current_user.id,
         Progress.tutorial_id == tutorial_id
     ).first()
 
@@ -115,15 +119,26 @@ def get_tutorial_stats(tutorial_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/dashboard")
-def get_dashboard_stats(db: Session = Depends(get_db)):
+def get_dashboard_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Get overall dashboard statistics"""
-    total_tutorials = db.query(Tutorial).count()
-    published_tutorials = db.query(Tutorial).filter(Tutorial.is_published == True).count()
+    # Build query for accessible tutorials based on user role
+    query = db.query(Tutorial)
 
-    # TODO: Get user_id from auth
-    user_id = "default-user"
+    if current_user.role == UserRole.COLABORADOR:
+        # Colaboradores only see published tutorials or tutorials they have explicit access to
+        accessible_tutorial_ids = [t.id for t in current_user.accessible_tutorials]
+        query = query.filter(
+            (Tutorial.is_published == True) | (Tutorial.id.in_(accessible_tutorial_ids))
+        )
+    # Admins see everything
 
-    user_progress = db.query(Progress).filter(Progress.user_id == user_id).all()
+    total_tutorials = query.count()
+    published_tutorials = query.filter(Tutorial.is_published == True).count()
+
+    user_progress = db.query(Progress).filter(Progress.user_id == current_user.id).all()
     in_progress = len([p for p in user_progress if not p.completed])
     completed = len([p for p in user_progress if p.completed])
 

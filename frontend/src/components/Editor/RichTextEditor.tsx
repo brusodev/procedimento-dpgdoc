@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
@@ -31,6 +31,13 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       }
     },
   })
+
+  // Sync editor content when prop changes (e.g., when switching steps)
+  useEffect(() => {
+    if (editor && content !== editor.getHTML()) {
+      editor.commands.setContent(content || '')
+    }
+  }, [content, editor])
 
   if (!editor) {
     return null
