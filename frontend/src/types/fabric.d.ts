@@ -57,5 +57,10 @@ declare module 'fabric' {
       constructor(text: string, options?: any): Textbox
       [key: string]: any
     }
+
+    class Group {
+      constructor(objects?: any[], options?: any): Group
+      [key: string]: any
+    }
   }
 }
