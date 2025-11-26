@@ -14,7 +14,6 @@ interface RichTextEditorProps {
 const RichTextEditor: React.FC<RichTextEditorProps> = ({
   content = '',
   onChange,
-  placeholder = 'Write step instructions here...',
 }) => {
   const editor = useEditor({
     extensions: [

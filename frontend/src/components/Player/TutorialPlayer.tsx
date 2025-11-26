@@ -28,7 +28,7 @@ const TutorialPlayer: React.FC<TutorialPlayerProps> = ({
   const playerRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showControls, setShowControls] = useState(true)
-  const hideControlsTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const hideControlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastMouseMoveRef = useRef<number>(0)
 
   const currentStep = steps[currentStepIndex]

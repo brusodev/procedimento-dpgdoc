@@ -1,6 +1,6 @@
 import React, { useCallback, useState, useEffect } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { Upload, X, CheckCircle, Video } from 'lucide-react'
+import { X, CheckCircle, Video } from 'lucide-react'
 import { uploadApi } from '@/services/api'
 
 interface VideoUploadProps {

@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom'
 import { useEffect } from 'react'
-import { BookOpen, PlusCircle, BarChart3, GraduationCap, Users, LogOut } from 'lucide-react'
+import { PlusCircle, BarChart3, GraduationCap, Users, LogOut } from 'lucide-react'
 import CreateTutorial from './pages/CreateTutorial'
 import EditTutorial from './pages/EditTutorial'
 import ViewTutorial from './pages/ViewTutorial'

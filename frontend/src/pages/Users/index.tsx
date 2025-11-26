@@ -55,7 +55,6 @@ export default function Users() {
   const handleCreateUser = async () => {
     try {
       // Use the auth API register endpoint to create user
-      const { password, ...userData } = newUser
       await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/register`, {
         method: 'POST',
         headers: {

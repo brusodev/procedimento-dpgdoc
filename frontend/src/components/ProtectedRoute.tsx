@@ -3,7 +3,7 @@ import useAuthStore from '../services/authStore'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
-  allowedRoles?: Array<'admin' | 'instructor' | 'student'>
+  allowedRoles?: Array<'admin' | 'instructor' | 'student' | 'colaborador'>
 }
 
 export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {

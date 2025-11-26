@@ -129,7 +129,7 @@ interface PlayerState {
   reset: () => void
 }
 
-export const usePlayerStore = create<PlayerState>((set, get) => ({
+export const usePlayerStore = create<PlayerState>((set) => ({
   currentStepIndex: 0,
   isPlaying: false,
   completedSteps: [],

@@ -5,7 +5,7 @@ import ScreenshotUpload from '@/components/Editor/ScreenshotUpload'
 import VideoUpload from '@/components/Editor/VideoUpload'
 import ImageAnnotator from '@/components/Editor/ImageAnnotator'
 import RichTextEditor from '@/components/Editor/RichTextEditor'
-import { tutorialApi, Step, Annotation } from '@/services/api'
+import { tutorialApi, Step } from '@/services/api'
 
 const EditTutorial: React.FC = () => {
   const { id } = useParams<{ id: string }>()

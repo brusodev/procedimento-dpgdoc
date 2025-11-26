@@ -37,7 +37,7 @@ const ImageAnnotator: React.FC<ImageAnnotatorProps> = ({
     fabricCanvasRef.current = canvas
 
     // Load background image
-    fabric.Image.fromURL(imageUrl, (img) => {
+    fabric.Image.fromURL(imageUrl, (img: any) => {
       // Calculate scale to fit image in canvas while maintaining aspect ratio
       const scaleX = containerWidth / img.width!
       const scaleY = maxHeight / img.height!
@@ -71,11 +71,11 @@ const ImageAnnotator: React.FC<ImageAnnotatorProps> = ({
     loadAnnotations(canvas, annotations)
 
     // Handle selection
-    canvas.on('selection:created', (e) => {
+    canvas.on('selection:created', (e: any) => {
       setSelectedObject(e.selected![0])
     })
 
-    canvas.on('selection:updated', (e) => {
+    canvas.on('selection:updated', (e: any) => {
       setSelectedObject(e.selected![0])
     })
 
@@ -266,8 +266,8 @@ const ImageAnnotator: React.FC<ImageAnnotatorProps> = ({
 
     const objects = fabricCanvasRef.current.getObjects()
     const newAnnotations: Annotation[] = objects
-      .filter((obj) => obj.selectable)
-      .map((obj, index) => {
+      .filter((obj: any) => obj.selectable)
+      .map((obj: any, index: number) => {
         // Get the custom annotation type we set when creating the object
         const annotationType = (obj as any).annotationType || 'box'
         const tooltipText = (obj as any).tooltipText
