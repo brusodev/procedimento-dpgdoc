@@ -56,6 +56,9 @@ def health_check():
 # Serve frontend static files in production
 frontend_dist = Path(__file__).parent.parent.parent / "frontend" / "dist"
 
+print(f"[INFO] Looking for frontend at: {frontend_dist}")
+print(f"[INFO] Frontend exists: {frontend_dist.exists()}")
+
 if frontend_dist.exists():
     # Mount static files
     app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets")
