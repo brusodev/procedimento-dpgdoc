@@ -39,15 +39,6 @@ app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"]
 app.include_router(upload.router, prefix="/api/upload", tags=["upload"])
 
 
-@app.get("/")
-def read_root():
-    return {
-        "message": "Tutorial System API",
-        "version": "1.0.0",
-        "docs": "/docs"
-    }
-
-
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}
@@ -63,11 +54,11 @@ if frontend_dist.exists():
     # Mount static files
     app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets")
 
-    # Serve index.html for all frontend routes
+    # Serve index.html for all frontend routes (including root)
     @app.get("/{full_path:path}")
     async def serve_frontend(full_path: str):
         # Don't serve frontend for API routes
-        if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("openapi.json"):
+        if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("openapi.json") or full_path.startswith("health"):
             return {"detail": "Not found"}
 
         # Serve index.html for all other routes (SPA)
@@ -76,3 +67,13 @@ if frontend_dist.exists():
             return FileResponse(index_file)
 
         return {"detail": "Frontend not built"}
+else:
+    # Fallback API response when frontend is not built
+    @app.get("/")
+    def read_root():
+        return {
+            "message": "Tutorial System API",
+            "version": "1.0.0",
+            "docs": "/docs",
+            "note": "Frontend not found - API only mode"
+        }
