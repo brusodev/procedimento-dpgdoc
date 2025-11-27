@@ -41,6 +41,7 @@ class StepUpdate(BaseModel):
     validation_required: Optional[bool] = None
     validation_type: Optional[str] = None
     validation_target: Optional[str] = None
+    annotations: List[AnnotationCreate] = []
 
 
 class StepResponse(BaseModel):
