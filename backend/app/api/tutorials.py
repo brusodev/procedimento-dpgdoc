@@ -6,7 +6,7 @@ from ..models import Tutorial, Step, Annotation
 from ..models.user import User, UserRole
 from ..schemas.tutorial import (
     TutorialCreate, TutorialUpdate, TutorialResponse, TutorialListResponse,
-    StepCreate, StepUpdate, StepResponse, AnnotationCreate
+    StepCreate, StepUpdate, StepResponse, AnnotationCreate, StepsReorderRequest
 )
 from ..services.auth import get_current_user, require_role
 
@@ -326,3 +326,56 @@ def delete_step(tutorial_id: str, step_id: str, db: Session = Depends(get_db)):
     db.delete(db_step)
     db.commit()
     return None
+
+
+@router.post("/{tutorial_id}/steps/reorder", response_model=List[StepResponse])
+def reorder_steps(
+    tutorial_id: str,
+    reorder_request: StepsReorderRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Reorder steps in a tutorial"""
+    # Verify tutorial exists
+    tutorial = db.query(Tutorial).filter(Tutorial.id == tutorial_id).first()
+    if not tutorial:
+        raise HTTPException(status_code=404, detail="Tutorial not found")
+
+    # Only creator and admins can reorder
+    if current_user.role != UserRole.ADMIN and tutorial.created_by != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to reorder steps in this tutorial"
+        )
+
+    # Get all step IDs from the request
+    step_ids = [step.step_id for step in reorder_request.steps]
+
+    # Verify all steps belong to this tutorial
+    db_steps = db.query(Step).filter(
+        Step.id.in_(step_ids),
+        Step.tutorial_id == tutorial_id
+    ).all()
+
+    if len(db_steps) != len(step_ids):
+        raise HTTPException(
+            status_code=400,
+            detail="Some steps don't belong to this tutorial or don't exist"
+        )
+
+    # Create a mapping of step_id to new_order
+    order_mapping = {step.step_id: step.new_order for step in reorder_request.steps}
+
+    # Update the order for each step
+    for db_step in db_steps:
+        if db_step.id in order_mapping:
+            db_step.order = order_mapping[db_step.id]
+
+    db.commit()
+
+    # Return all steps ordered by the new order
+    updated_steps = db.query(Step).filter(
+        Step.tutorial_id == tutorial_id
+    ).order_by(Step.order).all()
+
+    return updated_steps

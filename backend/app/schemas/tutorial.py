@@ -108,3 +108,12 @@ class TutorialListResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class StepReorder(BaseModel):
+    step_id: str
+    new_order: int
+
+
+class StepsReorderRequest(BaseModel):
+    steps: List[StepReorder] = Field(..., description="Lista de steps com suas novas ordens")
